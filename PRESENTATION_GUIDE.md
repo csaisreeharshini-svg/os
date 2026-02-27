@@ -8,7 +8,7 @@ This guide is designed to help you deliver a **flawless, high-impact presentatio
 
 Before you start speaking or sharing your screen, follow this checklist to ensure everything runs smoothly:
 
-1.  **Environment Check:** Ensure you are in the `/Users/puranikyashaswinsharma/Desktop/os` directory.
+1.  **Environment Check:** Ensure you are in the project's root directory (e.g., `~/Desktop/os`).
 2.  **Clean State:** Open your terminal (`zsh`) and maximize the window horizontally for the best `tree` view.
 3.  **Start the Program:** Run `python main.py` so the interactive prompt is ready.
 4.  **Zoom In:** Use `Cmd + '+'` to increase the terminal font size so the back of the class can read the output clearly.
