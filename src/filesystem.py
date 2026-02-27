@@ -38,10 +38,10 @@ class FileSystemManager:
         self.current_directory = self.root
         self.operation_log = []
     
-    def _log_operation(self, operation: str, target: str, status: str, details: str = ""):
+    def _log_operation(self, message: str):
         """Log an operation"""
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_entry = f"[{timestamp}] [{operation}] [{target}] [{status}] [{details}]"
+        timestamp = datetime.now().strftime("%I:%M %p")
+        log_entry = f"[{timestamp}] {message}"
         self.operation_log.append(log_entry)
     
     def _validate_name(self, name: str) -> Tuple[bool, str]:
@@ -76,7 +76,8 @@ class FileSystemManager:
         success = self.current_directory.add_child(file_node)
         
         if success:
-            self._log_operation("CREATE", file_node.get_path(), "SUCCESS", f"Size: {file_node.format_size()}")
+            dir_name = self.current_directory.name if self.current_directory.name else "Root"
+            self._log_operation(f"File '{name}' created in {dir_name}")
             return True, f"Created file '{name}' ({file_node.format_size()})"
         
         return False, f"Failed to create file '{name}'"
@@ -108,7 +109,7 @@ class FileSystemManager:
         success = self.current_directory.add_child(dir_node)
         
         if success:
-            self._log_operation("MKDIR", dir_node.get_path(), "SUCCESS", "")
+            self._log_operation(f"Folder '{name}' created")
             return True, f"Created directory '{name}'"
         
         return False, f"Failed to create directory '{name}'"
@@ -126,11 +127,50 @@ class FileSystemManager:
         success = self.current_directory.remove_child(name)
         
         if success:
-            self._log_operation("DELETE", node.get_path(), "SUCCESS", "Recursive" if recursive else "")
+            node_type = 'Folder' if isinstance(node, DirectoryNode) else 'File'
+            self._log_operation(f"{node_type} '{name}' deleted")
             return True, f"Deleted '{name}'"
         
         return False, f"Failed to delete '{name}'"
     
+    def rename(self, old_name: str, new_name: str) -> Tuple[bool, str]:
+        """Rename a file or directory"""
+        valid, error = self._validate_name(new_name)
+        if not valid:
+            return False, error
+            
+        node = self.current_directory.get_child(old_name)
+        if node is None:
+            return False, f"'{old_name}' not found"
+            
+        if self.current_directory.has_child(new_name):
+            return False, f"'{new_name}' already exists"
+            
+        self.current_directory.remove_child(old_name)
+        node.name = new_name
+        if isinstance(node, FileNode):
+            node.extension = new_name.split('.')[-1] if '.' in new_name else ""
+        self.current_directory.add_child(node)
+        
+        node_type = 'Folder' if isinstance(node, DirectoryNode) else 'File'
+        self._log_operation(f"{node_type} '{old_name}' renamed to '{new_name}'")
+        return True, f"Renamed '{old_name}' to '{new_name}'"
+
+    def get_info(self, name: str) -> Tuple[bool, dict, str]:
+        """Get file/directory metadata"""
+        node = self.current_directory.get_child(name)
+        if node is None:
+            return False, {}, f"'{name}' not found"
+        
+        info = {
+            'File Name': node.name,
+            'File Size': node.format_size(),
+            'File Type': node.get_file_type() if isinstance(node, FileNode) else 'Directory',
+            'Access Mode': node.access_mode,
+            'Created On': node.created_at.strftime("%d-%m-%Y %I:%M %p"),
+        }
+        return True, info, ""
+
     def change_directory(self, path: str) -> Tuple[bool, str]:
         """Change current directory (cd command)"""
         if self.mode == FSMode.SINGLE_LEVEL:
@@ -191,6 +231,15 @@ class FileSystemManager:
         """Search for files/directories recursively"""
         results = []
         self._search_recursive(self.current_directory, query, results)
+        
+        if results:
+            first_path = results[0]['path']
+            parts = first_path.split('/')
+            found_in = parts[-2] if len(parts) > 1 and parts[-2] else "Root"
+            self._log_operation(f"Search performed for '{query}' – Found in {found_in}")
+        else:
+            self._log_operation(f"Search performed for '{query}' – No results found")
+            
         return results
     
     def _search_recursive(self, directory: DirectoryNode, query: str, results: List[dict]):
@@ -230,21 +279,20 @@ class FileSystemManager:
         
         for i, child in enumerate(children):
             is_last_child = (i == len(children) - 1)
-            connector = "└── " if is_last_child else "├── "
+            connector = " └── " if is_last_child else " ├── "
             
             if isinstance(child, DirectoryNode):
                 result += f"{prefix}{connector}{child.name}/\n"
-                new_prefix = prefix + ("    " if is_last_child else "│   ")
+                new_prefix = prefix + ("     " if is_last_child else " │   ")
                 result += self._build_tree(child, new_prefix, is_last_child)
             else:
-                time_str = child.modified_at.strftime("%H:%M")
-                result += f"{prefix}{connector}{child.name} [{child.format_size()} | {time_str}]\n"
+                result += f"{prefix}{connector}{child.name}\n"
         
         return result
     
     def get_full_tree(self) -> str:
         """Get ASCII tree from root"""
-        return f"/\n{self._build_tree(self.root, '', True)}"
+        return f"Root/\n{self._build_tree(self.root, '', True)}".rstrip()
     
     def get_logs(self) -> List[str]:
         """Get operation logs"""

@@ -21,6 +21,7 @@ class BaseNode:
         self.created_at = datetime.now()
         self.modified_at = datetime.now()
         self.size = 0  # bytes
+        self.access_mode = "Read / Write"
     
     def get_path(self) -> str:
         """Get absolute path of this node"""
@@ -38,11 +39,11 @@ class BaseNode:
     def format_size(self) -> str:
         """Format size in human-readable format"""
         if self.size < 1024:
-            return f"{self.size}B"
+            return f"{self.size} B"
         elif self.size < 1024 * 1024:
-            return f"{self.size / 1024:.1f}KB"
+            return f"{self.size / 1024:.1f} KB"
         else:
-            return f"{self.size / (1024 * 1024):.1f}MB"
+            return f"{self.size / (1024 * 1024):.1f} MB"
 
 
 class FileNode(BaseNode):
@@ -53,6 +54,25 @@ class FileNode(BaseNode):
         self.size = size
         self.extension = name.split('.')[-1] if '.' in name else ""
     
+    def get_file_type(self) -> str:
+        ext = self.extension.lower()
+        type_map = {
+            'pdf': 'PDF Document',
+            'doc': 'Word Document',
+            'docx': 'Word Document',
+            'txt': 'Text Document',
+            'png': 'PNG Image',
+            'jpg': 'JPEG Image',
+            'jpeg': 'JPEG Image',
+            'mp3': 'Audio File',
+            'mp4': 'Video File'
+        }
+        if ext in type_map:
+            return type_map[ext]
+        elif ext:
+            return f"{ext.upper()} File"
+        return "Unknown File Type"
+        
     def __repr__(self):
         return f"FileNode({self.name}, {self.format_size()})"
 

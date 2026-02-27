@@ -128,6 +128,31 @@ class CLI:
             else:
                 self.print_error(message)
             return
+            
+        # Rename
+        if cmd == "rename":
+            if len(args) < 2:
+                self.print_error("Usage: rename <old_name> <new_name>")
+                return
+            success, message = self.fs.rename(args[0], args[1])
+            if success:
+                self.print_success(message)
+            else:
+                self.print_error(message)
+            return
+            
+        # Info
+        if cmd == "info" or cmd == "stat":
+            if len(args) < 1:
+                self.print_error("Usage: info <name>")
+                return
+            success, info, message = self.fs.get_info(args[0])
+            if success:
+                for k, v in info.items():
+                    print(f"{k.ljust(12)}: {v}")
+            else:
+                self.print_error(message)
+            return
         
         # Change directory
         if cmd == "cd":
@@ -210,6 +235,8 @@ FILE OPERATIONS:
   mkdir <dirname>                      Create a new directory
   delete <name> [--recursive]          Delete file or directory
   rm <name> [--recursive]              Alias for delete
+  rename <old> <new>                   Rename a file or folder
+  info <name>                          Show file/folder details
 
 NAVIGATION (Two-Level & Hierarchical only):
   cd <path>                            Change directory
@@ -243,49 +270,84 @@ EXAMPLES:
         print("RUNNING DEMONSTRATION")
         print("="*60 + "\n")
         
+        print("1️⃣ Visual Directory Tree")
+        
         # Phase 1: Single-Level
-        print("PHASE 1: Single-Level Directory")
-        print("-" * 40)
+        print("\n🔹 Single-Level Directory")
         self.fs.set_mode(FSMode.SINGLE_LEVEL)
-        self.fs.create_file("fileA.txt")
-        self.fs.create_file("fileB.txt")
-        success, msg = self.fs.create_directory("folder")
-        if not success:
-            print(f"mkdir folder -> {msg}")
-        print("\nContents:")
-        for item in self.fs.list_contents():
-            print(f"  {item['name']} ({item['type']})")
+        self.fs.create_file("file1.txt")
+        self.fs.create_file("file2.doc")
+        self.fs.create_file("image.png")
+        print("\nExample Output:\n")
+        print(self.fs.get_full_tree())
+        print("\nAll files are stored in one directory. No subfolders.\n")
         
         # Phase 2: Two-Level
-        print("\n\nPHASE 2: Two-Level Directory")
-        print("-" * 40)
+        print("🔹 Two-Level Directory")
         self.fs.set_mode(FSMode.TWO_LEVEL)
-        self.fs.create_directory("User1")
-        self.fs.create_directory("User2")
-        self.fs.change_directory("User1")
-        self.fs.create_file("doc.txt")
+        self.fs.create_directory("UserA")
+        self.fs.change_directory("UserA")
+        self.fs.create_file("notes.txt")
+        self.fs.create_file("photo.jpg")
         self.fs.change_directory("..")
-        print("\nTree Structure:")
+        self.fs.create_directory("UserB")
+        self.fs.change_directory("UserB")
+        self.fs.create_file("project.docx")
+        self.fs.change_directory("..")
+        print("\nExample Output:\n")
         print(self.fs.get_full_tree())
+        print("\nEach user has a separate folder.\n")
         
         # Phase 3: Hierarchical
-        print("\n\nPHASE 3: Hierarchical Directory")
-        print("-" * 40)
+        print("🔹 Hierarchical (Tree-Based) Directory")
         self.fs.set_mode(FSMode.HIERARCHICAL)
-        self.fs.create_directory("Home")
-        self.fs.change_directory("Home")
         self.fs.create_directory("Documents")
-        self.fs.create_directory("Pictures")
         self.fs.change_directory("Documents")
-        self.fs.create_file("resume.pdf")
-        self.fs.change_directory("../..")
-        print("\nTree Structure:")
+        self.fs.create_directory("College")
+        self.fs.change_directory("College")
+        self.fs.create_file("assignment.pdf", size=int(2.4 * 1024 * 1024))
+        self.fs.change_directory("..")
+        self.fs.create_file("Resume.docx")
+        self.fs.change_directory("..")
+        self.fs.create_directory("Pictures")
+        self.fs.change_directory("Pictures")
+        self.fs.create_file("trip.png")
+        self.fs.change_directory("..")
+        self.fs.create_directory("Music")
+        self.fs.change_directory("Music")
+        self.fs.create_file("song.mp3")
+        self.fs.change_directory("..")
+        print("\nExample Output:\n")
         print(self.fs.get_full_tree())
-        print("\nSearch for 'resume':")
-        results = self.fs.search("resume")
-        for result in results:
-            print(f"  {result['path']} ({result['size']})")
+        print("\nThis supports multiple levels of folders inside folders.\n")
+
+        print("2️⃣ File Metadata Display")
+        print("Example Output:\n")
+        self.fs.change_directory("Documents/College")
+        success, info, msg = self.fs.get_info("assignment.pdf")
+        if success:
+            for k, v in info.items():
+                print(f"{k.ljust(12)}: {v}")
         
+        print("\n\n3️⃣ Logs of Operations")
+        print("Example Output:\n")
+        self.fs._reset_filesystem()
+        self.fs.create_directory("Documents")
+        self.fs.change_directory("Documents")
+        self.fs.create_file("assignment.pdf")
+        self.fs.rename("assignment.pdf", "final_assignment.pdf")
+        self.fs.delete("final_assignment.pdf")
+        self.fs.change_directory("..")
+        self.fs.create_directory("Pictures")
+        self.fs.change_directory("Pictures")
+        self.fs.create_file("trip.png")
+        self.fs.change_directory("..")
+        self.fs.search("trip.png")
+        
+        logs = self.fs.get_logs()
+        for log in logs:
+            print(log)
+            
         print("\n" + "="*60)
         print("DEMONSTRATION COMPLETE")
         print("="*60 + "\n")
